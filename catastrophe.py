@@ -73,6 +73,27 @@ def one_shot(shot_angle,lin_weight,q_star,radius,final_time_path,one_shot_dt,J,s
         postive_eig_vec[1][3]) * one_shot_dt
     return shoot(y1_i, y2_i, p1_i, p2_i, final_time_path,J,shot_dq_dt,lam,epsilon,factor,gamma)
 
+def record_data(folder_name,beta,gamma,stoptime,int_lin_combo,numpoints,epsilon,path,q_star,r,angle,factor,dt):
+    dir_path = os.path.dirname(os.path.realpath(__file__))
+    os.chdir(dir_path + '/Data')
+    os.mkdir(folder_name)
+    os.chdir(dir_path + '/Data/' + folder_name)
+    pickle.dump(beta, open('beta.pkl', 'wb'))
+    pickle.dump(gamma, open('gamma.pkl', 'wb'))
+    # pickle.dump(sim, open('sim.pkl', 'wb'))
+    pickle.dump(stoptime, open('stoptime.pkl', 'wb'))
+    pickle.dump(int_lin_combo, open('lin_combo.pkl', 'wb'))
+    pickle.dump(numpoints, open('numpoints.pkl', 'wb'))
+    pickle.dump(epsilon, open('epsilon_matrix.pkl', 'wb'))
+    pickle.dump(path, open('guessed_paths.pkl', 'wb'))
+    pickle.dump(np.linspace(0.0, stoptime, numpoints), open('time_series.pkl', 'wb'))
+    # pickle.dump(guessed_action, open('action_paths.pkl', 'wb'))
+    pickle.dump(q_star, open('qstar.pkl', 'wb'))
+    pickle.dump(r, open('radius.pkl', 'wb'))
+    pickle.dump(angle, open('shot_angle.pkl', 'wb'))
+    pickle.dump(factor, open('factor.pkl', 'wb'))
+
+
 
 if __name__=='__main__':
     #Network Parameters
@@ -80,10 +101,10 @@ if __name__=='__main__':
     epslam,epsmu=0.01,0.01
     epsilon =np.array([epsmu,epslam])
     lam = beta/(1+epslam*epsmu)
-    factor =1.0
+    factor = 0.75
     abserr,relerr = 1.0e-20,1.0e-13
     # ODE parameters
-    stoptime= 20.0
+    stoptime= 13.5
     numpoints = 100
     # Create the time samples for the output of the ODE solver
     t = np.linspace(0.0,stoptime,numpoints)
@@ -92,16 +113,29 @@ if __name__=='__main__':
     r = 5e-5
     angle = 1.0
     duration,t0=1.0,5.0
-
-    int_lin_combo = 0.979693127715
+    folder_name='temp'
+    # int_lin_combo = 0.979693127715
+    int_lin_combo = 0.9796967500
     y1_0, y2_0, p1_0, p2_0, p1_star_clancy, p2_star_clancy, shot_dq_dt, J = eq_hamilton_J(lam,t,epsilon, factor, gamma)
     q_star = [y1_0, y2_0, p1_star_clancy, p2_star_clancy]
     path = one_shot(angle, int_lin_combo, q_star, r, t, dt, J, shot_dq_dt,epsilon,lam,factor,gamma,duration,t0)
-    plt.plot((path[:,0]+path[:,1])/2,(path[:,2]+path[:,3])/2)
+    y1_for_linear = np.linspace(path[:, 0][-1], 0, numpoints)
+    py1_linear = p1_star_clancy - ((p1_star_clancy - path[:, 2][-1]) / path[:, 0][-1]) * y1_for_linear
+    y2_for_linear = np.linspace(path[:, 1][-1], 0, numpoints)
+    py2_linear = p2_star_clancy - ((p2_star_clancy - path[:, 3][-1]) / path[:, 1][-1]) * y2_for_linear
+    addition_to_path = np.stack((y1_for_linear, y2_for_linear, py1_linear, py2_linear), axis=1)
+    path_addition = np.vstack((path, addition_to_path))
+    plt.plot((path_addition[:,0]+path_addition[:,1])/2,(path_addition[:,2]+path_addition[:,3])/2)
     plt.xlabel('w')
     plt.ylabel(r'$p_{w}$')
     plt.title(r'$p_{w}$ vs w for $R_{0}$='+str(beta))
     plt.show()
+    plt.plot(t, (path[:,0]+path[:,1])/2)
+    plt.xlabel('t')
+    plt.ylabel(r'$w$')
+    plt.title(r'w vs t for $R_{0}$=' + str(beta))
+    plt.show()
+    # record_data(folder_name, beta, gamma, stoptime, int_lin_combo, numpoints, epsilon, path, q_star, r, angle)
     print('This no love song')
 
 
