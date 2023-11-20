@@ -8,7 +8,7 @@ import os
 hamiltonian = lambda R0,y1,y2,p1,p2,eps_mu,eps_lam: (-1 + np.exp(-p1))*y1 + (-1 + np.exp(-p2))*y2 + (R0*(y1 + y2 + (-y1 + y2)*
               eps_lam)*(((-1 + np.exp(p1))*(-1 + 2*y1)*(-1 + eps_mu))/2 + (-1 + np.exp(p2))*(0.5 - y2)*(1 + eps_mu)))/(1 + eps_lam*eps_mu)
 
-def plot_paths_energy(t,lam,p,e,f,dir_path,directory_name):
+def plot_paths_energy(t,lam,p,e,f,tau,dir_path,directory_name):
     fig_time_v_w, ax_time_v_w = plt.subplots()
     fig_time_v_y1, ax_time_v_y1 = plt.subplots()
     fig_time_v_y2, ax_time_v_y2 = plt.subplots()
@@ -19,19 +19,21 @@ def plot_paths_energy(t,lam,p,e,f,dir_path,directory_name):
     fig_w_pw, ax_w_pw = plt.subplots()
     fig_u_pu, ax_u_pu = plt.subplots()
     linstyles=['-','--',':','-.']
-    for i,(time_series,beta,path,epsilon,factor) in enumerate(zip(t,lam,p,e,f)):
+    for i,(time_series,beta,path,epsilon,factor,t0) in enumerate(zip(t,lam,p,e,f,tau)):
         w,u,pw,pu = (path[:, 0]+path[:, 1])/2,(path[:, 0]-path[:, 1])/2,(path[:, 2] + path[:, 3]) / 2,(path[:, 2] - path[:, 3]) / 2
-
-        ax_time_h.plot(time_series,hamiltonian(beta, path[:, 0], path[:, 1], path[:, 2], path[:, 3], epsilon[0],
-                             epsilon[1]),linestyle=linstyles[i%len(linstyles)],label=r'$\phi={}$'.format(factor))
-        ax_time_v_w.plot(time_series,w,linestyle=linstyles[i%len(linstyles)],label=r'$\phi={}$'.format(factor))
-        ax_time_v_u.plot(time_series,u,linestyle=linstyles[i%len(linstyles)],label=r'$\phi={}$'.format(factor))
-        ax_time_v_y1.plot(time_series,path[:, 0],linestyle=linstyles[i%len(linstyles)],label=r'$\phi={}$'.format(factor))
-        ax_time_v_y2.plot(time_series,path[:, 1],linestyle=linstyles[i%len(linstyles)],label=r'$\phi={}$'.format(factor))
-        ax_y1_p1.plot(path[:, 0],path[:, 2],linestyle=linstyles[i%len(linstyles)],label=r'$\phi={}$'.format(factor))
-        ax_y2_p2.plot(path[:, 1],path[:, 3],linestyle=linstyles[i%len(linstyles)],label=r'$\phi={}$'.format(factor))
-        ax_u_pu.plot(u,pu,linestyle=linstyles[i%len(linstyles)],label=r'$\phi={}$'.format(factor))
-        ax_w_pw.plot(w,pw,linestyle=linstyles[i%len(linstyles)],label=r'$\phi={}$'.format(factor))
+        timed_factor = np.ones(np.size(time_series))
+        timed_factor[np.logical_and(time_series > 0.1, time_series < 1.1)] = factor
+        timed_beta = beta * timed_factor
+        ax_time_h.plot(time_series,hamiltonian(timed_beta, path[:, 0], path[:, 1], path[:, 2], path[:, 3], epsilon[1],
+                             epsilon[0]),linestyle=linstyles[i%len(linstyles)],label=r'$\epsilon={}$'.format(round(epsilon[0],2)))
+        ax_time_v_w.plot(time_series,w,linestyle=linstyles[i%len(linstyles)],label=r'$\epsilon={}$'.format(round(epsilon[0],2)))
+        ax_time_v_u.plot(time_series,u,linestyle=linstyles[i%len(linstyles)],label=r'$\epsilon={}$'.format(round(epsilon[0],2)))
+        ax_time_v_y1.plot(time_series,path[:, 0],linestyle=linstyles[i%len(linstyles)],label=r'$\epsilon={}$'.format(round(epsilon[0],2)))
+        ax_time_v_y2.plot(time_series,path[:, 1],linestyle=linstyles[i%len(linstyles)],label=r'$\epsilon={}$'.format(round(epsilon[0],2)))
+        ax_y1_p1.plot(path[:, 0],path[:, 2],linestyle=linstyles[i%len(linstyles)],label=r'$\epsilon={}$'.format(round(epsilon[0],2)))
+        ax_y2_p2.plot(path[:, 1],path[:, 3],linestyle=linstyles[i%len(linstyles)],label=r'$\epsilon={}$'.format(round(epsilon[0],2)))
+        ax_u_pu.plot(u,pu,linestyle=linstyles[i%len(linstyles)],label=r'$\epsilon={}$'.format(round(epsilon[0],2)))
+        ax_w_pw.plot(w,pw,linestyle=linstyles[i%len(linstyles)],label=r'$\epsilon={}$'.format(round(epsilon[0],2)))
     os.chdir(dir_path + directory_name)
     ax_time_h.legend()
     ax_time_h.set_title('Hamiltonian vs time')
@@ -83,7 +85,7 @@ def plot_paths_energy(t,lam,p,e,f,dir_path,directory_name):
 
 def plot_path(file_name,directory_name):
     dir_path = os.path.dirname(os.path.realpath(__file__))
-    beta, epsilon ,factor, gamma, path, linear_combo, numpoints,qstar, radius,shot_angle, stoptime, time_series = [], [], [], [], [], [], [],[], [], [], [], []
+    beta, epsilon ,factor, gamma, path, linear_combo, numpoints,qstar, radius,shot_angle, stoptime, time_series,tau = [], [], [], [], [], [], [],[], [], [], [], [],[]
     for f in range(len(file_name)):
         os.chdir(dir_path + directory_name)
         os.chdir(file_name[f])
@@ -99,14 +101,17 @@ def plot_path(file_name,directory_name):
         shot_angle.append(np.load('shot_angle.pkl',allow_pickle=True))
         stoptime.append(np.load('stoptime.pkl',allow_pickle=True))
         time_series.append(np.load('time_series.pkl',allow_pickle=True))
-    plot_paths_energy(time_series, beta, path, epsilon, factor, dir_path, directory_name)
+        tau.append(np.load('t0.pkl',allow_pickle=True))
+    plot_paths_energy(time_series, beta, path, epsilon, factor, tau, dir_path, directory_name)
 
 
 
 if __name__ == '__main__':
     directory_name = '/Data/'
-    filename=['epslam04_epsin04_factor075_lam16_stoptime20_t5_no_linear_extention','epslam04_epsin04_factor09_lam16_stoptime20_t5',
-              'epslam04_epsin04_factor10_lam16_stoptime20_t5_homo']
+    # filename=['epslam04_epsin04_factor075_lam16_stoptime20_t5_no_linear_extention','epslam04_epsin04_factor09_lam16_stoptime20_t5',
+    #           'epslam04_epsin04_factor10_lam16_stoptime20_t5_homo']
+    filename=['epslam01_epsin01_factor0_lam16_stoptime20_t001_angle10_duration01_numpoints2000']
+
     plot_path(filename,directory_name)
     dir_path = os.path.dirname(os.path.realpath(__file__))
 

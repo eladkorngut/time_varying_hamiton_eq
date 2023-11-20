@@ -297,7 +297,7 @@ def record_data(folder_name,beta,gamma,sim,stoptime,int_lin_combo,numpoints,epsi
 
 if __name__=='__main__':
     #Network Parameters
-    beta, gamma = 1.5, 1.0
+    beta, gamma = 1.6, 1.0
     abserr,relerr = 1.0e-20,1.0e-13
     sim='x'
     # ODE parameters
